@@ -117,6 +117,6 @@ func (rq RabbitQueue) Init(consumer interfaces.Consumer) {
 		}
 	}()
 
-	log.Printf("[*] Waiting for logs. To exit press CTRL+C")
+	log.Printf("[*] Waiting for logsssssssss. To exit press CTRL+C")
 	<-forever
 }
