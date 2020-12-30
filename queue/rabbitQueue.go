@@ -97,7 +97,7 @@ func (rq RabbitQueue) Init(consumer interfaces.Consumer) {
 			output, err := consumer.Process(d.Body)
 			customerror.FailOnError(err, "Failed to process body")
 
-			if output != "" {
+			if rq.routingKeyTo != "" {
 				err = ch.Publish(
 					rq.rabbitExchange, // exchange
 					rq.routingKeyTo,   // routing key
@@ -117,6 +117,6 @@ func (rq RabbitQueue) Init(consumer interfaces.Consumer) {
 		}
 	}()
 
-	log.Printf("[*] Waiting for logsssssssss. To exit press CTRL+C")
+	log.Printf("[*] Waiting for logs. To exit press CTRL+C")
 	<-forever
 }
