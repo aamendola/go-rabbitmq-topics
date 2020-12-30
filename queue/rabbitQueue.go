@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -92,9 +93,16 @@ func (rq RabbitQueue) Init(consumer interfaces.Consumer) {
 	forever := make(chan bool)
 	go func() {
 		for d := range msgs {
-			log.Printf("[Popping Message] [exchange:%s] [keys:%s] [body:%s]", rq.rabbitExchange, keys, d.Body)
+			log.Printf("Receiving message [exchange:%s] [keys:%s] [body:%s]", rq.rabbitExchange, keys, d.Body)
 
 			output, err := consumer.Process(d.Body)
+
+			var dat map[string]interface{}
+			if err := json.Unmarshal(d.Body, &dat); err != nil {
+				panic(err)
+			}
+			fmt.Println(dat)
+
 			customerror.FailOnError(err, "Failed to process body")
 
 			if rq.routingKeyTo != "" {
@@ -109,9 +117,9 @@ func (rq RabbitQueue) Init(consumer interfaces.Consumer) {
 					})
 				customerror.FailOnError(err, "Failed to publish a message")
 
-				log.Printf("[x] Sent to [exchange:%s] [routingKey:%s] [body:%s]", rq.rabbitExchange, rq.routingKeyTo, output)
+				log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", rq.rabbitExchange, rq.routingKeyTo, output)
 			} else {
-				log.Printf("There is not need to push anything")
+				log.Printf("There is not need to send anything")
 			}
 
 		}
