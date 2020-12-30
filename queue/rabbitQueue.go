@@ -19,9 +19,9 @@ type RabbitQueue struct {
 	routingKeyTo   string
 }
 type Response2 struct {
-	id      string `json:"id"`
-	path    string `json:"path"`
-	traceId string `json:"traceId"`
+	ID      string `json:"id"`
+	Path    string `json:"path"`
+	TraceID string `json:"traceId"`
 }
 
 /*
@@ -122,12 +122,14 @@ func (rq RabbitQueue) Init(consumer interfaces.Consumer) {
 			res := Response2{}
 			json.Unmarshal(d.Body, &res)
 			fmt.Println(res)
-			fmt.Println(res.id)
-			fmt.Println(res.path)
+			fmt.Println(res.ID)
+			fmt.Println(res.Path)
+			fmt.Println(res.TraceID)
 
 			fmt.Printf("==> res %T %v\n", res, res)
-			fmt.Printf("==> res.id %T %v\n", res.id, res.id)
-			fmt.Printf("==> res.path %T %v\n", res.path, res.path)
+			fmt.Printf("==> res.id %T %v\n", res.ID, res.ID)
+			fmt.Printf("==> res.Path %T %v\n", res.Path, res.Path)
+			fmt.Printf("==> res.TraceID %T %v\n", res.TraceID, res.TraceID)
 
 			customerror.FailOnError(err, "Failed to process body")
 
