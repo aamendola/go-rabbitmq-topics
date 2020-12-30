@@ -6,9 +6,12 @@ import (
 	"log"
 
 	"github.com/aamendola/rabbitmq-topics/customerror"
-	"github.com/aamendola/rabbitmq-topics/interfaces"
 	"github.com/streadway/amqp"
 )
+
+type Consumer interface {
+	Process(mesage Message) (err error)
+}
 
 type RabbitQueue struct {
 	rabbitHost     string
@@ -18,7 +21,8 @@ type RabbitQueue struct {
 	routingKeyFrom string
 	routingKeyTo   string
 }
-type Response2 struct {
+
+type Message struct {
 	ID      string `json:"id"`
 	Path    string `json:"path"`
 	TraceID string `json:"traceId"`
@@ -49,7 +53,7 @@ func MakeRabbitQueue(rabbitHost, rabbitUser, rabbitPassword, rabbitExchange, rou
 	return RabbitQueue{rabbitHost, rabbitUser, rabbitPassword, rabbitExchange, routingKeyFrom, routingKeyTo}
 }
 
-func (rq RabbitQueue) Init(consumer interfaces.Consumer) {
+func (rq RabbitQueue) Init(consumer Consumer) {
 
 	uri := fmt.Sprintf("amqp://%s:%s@%s:5672/", rq.rabbitUser, rq.rabbitPassword, rq.rabbitHost)
 	conn, err := amqp.Dial(uri)
@@ -110,8 +114,6 @@ func (rq RabbitQueue) Init(consumer interfaces.Consumer) {
 		for d := range msgs {
 			log.Printf("Receiving message [exchange:%s] [keys:%s] [body:%s]", rq.rabbitExchange, keys, d.Body)
 
-			output, err := consumer.Process(d.Body)
-
 			var dat map[string]interface{}
 			if err := json.Unmarshal(d.Body, &dat); err != nil {
 				panic(err)
@@ -119,18 +121,19 @@ func (rq RabbitQueue) Init(consumer interfaces.Consumer) {
 
 			fmt.Printf("==> dat %T %v\n", dat, dat)
 
-			res := Response2{}
-			json.Unmarshal(d.Body, &res)
-			fmt.Println(res)
-			fmt.Println(res.ID)
-			fmt.Println(res.Path)
-			fmt.Println(res.TraceID)
+			message := Message{}
+			json.Unmarshal(d.Body, &message)
+			fmt.Println(message)
+			fmt.Println(message.ID)
+			fmt.Println(message.Path)
+			fmt.Println(message.TraceID)
 
-			fmt.Printf("==> res %T %v\n", res, res)
-			fmt.Printf("==> res.id %T %v\n", res.ID, res.ID)
-			fmt.Printf("==> res.Path %T %v\n", res.Path, res.Path)
-			fmt.Printf("==> res.TraceID %T %v\n", res.TraceID, res.TraceID)
+			fmt.Printf("==> message %T %v\n", message, message)
+			fmt.Printf("==> message.id %T %v\n", message.ID, message.ID)
+			fmt.Printf("==> message.Path %T %v\n", message.Path, message.Path)
+			fmt.Printf("==> message.TraceID %T %v\n", message.TraceID, message.TraceID)
 
+			err := consumer.Process(message)
 			customerror.FailOnError(err, "Failed to process body")
 
 			if rq.routingKeyTo != "" {
@@ -141,11 +144,11 @@ func (rq RabbitQueue) Init(consumer interfaces.Consumer) {
 					false,             // immediate
 					amqp.Publishing{
 						ContentType: "text/plain",
-						Body:        []byte(output),
+						Body:        d.Body,
 					})
 				customerror.FailOnError(err, "Failed to publish a message")
 
-				log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", rq.rabbitExchange, rq.routingKeyTo, output)
+				log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", rq.rabbitExchange, rq.routingKeyTo, d.Body)
 			} else {
 				log.Printf("There is not need to send anything")
 			}
