@@ -18,6 +18,21 @@ type RabbitQueue struct {
 	routingKeyFrom string
 	routingKeyTo   string
 }
+type Response2 struct {
+	id      string `json:"id"`
+	path    string `json:"path"`
+	traceId string `json:"traceId"`
+}
+
+/*
+body:{
+	"Id":"8d18675e-a677-4e14-9ae1-955877c5387e",
+	"Type":"application/pdf",
+	"Path":"/var/documents/2020/12/8d18675e-a677-4e14-9ae1-955877c5387e.pdf",
+	"ImageUrl":null,
+	"TraceId":"8d18675e-a677-4e14-9ae1-955877c5387e"
+}
+*/
 
 func NewRabbitQueue(rabbitHost, rabbitUser, rabbitPassword, rabbitExchange, routingKeyFrom, routingKeyTo string) *RabbitQueue {
 	rq := new(RabbitQueue)
@@ -101,7 +116,18 @@ func (rq RabbitQueue) Init(consumer interfaces.Consumer) {
 			if err := json.Unmarshal(d.Body, &dat); err != nil {
 				panic(err)
 			}
-			fmt.Println(dat)
+
+			fmt.Printf("==> dat %T %v\n", dat, dat)
+
+			res := Response2{}
+			json.Unmarshal(d.Body, &res)
+			fmt.Println(res)
+			fmt.Println(res.id)
+			fmt.Println(res.path)
+
+			fmt.Printf("==> res %T %v\n", res, res)
+			fmt.Printf("==> res.id %T %v\n", res.id, res.id)
+			fmt.Printf("==> res.path %T %v\n", res.path, res.path)
 
 			customerror.FailOnError(err, "Failed to process body")
 
