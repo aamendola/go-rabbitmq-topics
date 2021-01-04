@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/aamendola/rabbitmq-topics/customerror"
+	utils "github.com/aamendola/go-utils"
 	"github.com/streadway/amqp"
 )
 
@@ -28,16 +28,6 @@ type Message struct {
 	TraceID string `json:"traceId"`
 }
 
-/*
-body:{
-	"Id":"8d18675e-a677-4e14-9ae1-955877c5387e",
-	"Type":"application/pdf",
-	"Path":"/var/documents/2020/12/8d18675e-a677-4e14-9ae1-955877c5387e.pdf",
-	"ImageUrl":null,
-	"TraceId":"8d18675e-a677-4e14-9ae1-955877c5387e"
-}
-*/
-
 func NewRabbitQueue(rabbitHost, rabbitUser, rabbitPassword, rabbitExchange, routingKeyFrom, routingKeyTo string) *RabbitQueue {
 	rq := new(RabbitQueue)
 	rq.rabbitHost = rabbitHost
@@ -57,11 +47,11 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 
 	uri := fmt.Sprintf("amqp://%s:%s@%s:5672/", rq.rabbitUser, rq.rabbitPassword, rq.rabbitHost)
 	conn, err := amqp.Dial(uri)
-	customerror.FailOnError(err, "Failed to connect to RabbitMQ")
+	utils.FailOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
 	ch, err := conn.Channel()
-	customerror.FailOnError(err, "Failed to open a channel")
+	utils.FailOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
 	err = ch.ExchangeDeclare(
@@ -73,7 +63,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 		false,             // no-wait
 		nil,               // arguments
 	)
-	customerror.FailOnError(err, "Failed to declare an exchange")
+	utils.FailOnError(err, "Failed to declare an exchange")
 
 	q, err := ch.QueueDeclare(
 		"",    // name
@@ -83,7 +73,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 		false, // no-wait
 		nil,   // arguments
 	)
-	customerror.FailOnError(err, "Failed to declare a queue")
+	utils.FailOnError(err, "Failed to declare a queue")
 
 	keys := []string{rq.routingKeyFrom}
 
@@ -95,7 +85,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 			rq.rabbitExchange, // exchange
 			false,
 			nil)
-		customerror.FailOnError(err, "Failed to bind a queue")
+		utils.FailOnError(err, "Failed to bind a queue")
 	}
 
 	msgs, err := ch.Consume(
@@ -107,7 +97,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 		false,  // no wait
 		nil,    // args
 	)
-	customerror.FailOnError(err, "Failed to register a consumer")
+	utils.FailOnError(err, "Failed to register a consumer")
 
 	forever := make(chan bool)
 	go func() {
@@ -134,7 +124,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 			fmt.Printf("==> message.TraceID %T %v\n", message.TraceID, message.TraceID)
 
 			err := consumer.Process(message)
-			customerror.FailOnError(err, "Failed to process body")
+			utils.FailOnError(err, "Failed to process body")
 
 			if rq.routingKeyTo != "" {
 				err = ch.Publish(
@@ -146,7 +136,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 						ContentType: "text/plain",
 						Body:        d.Body,
 					})
-				customerror.FailOnError(err, "Failed to publish a message")
+				utils.FailOnError(err, "Failed to publish a message")
 
 				log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", rq.rabbitExchange, rq.routingKeyTo, d.Body)
 			} else {
