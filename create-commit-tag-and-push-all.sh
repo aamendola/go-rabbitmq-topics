@@ -14,4 +14,4 @@ COMMIT_HASH=`git log --pretty=format:'%h' -n 1`
 git tag -a $VERSION -m "Last commit $COMMIT_HASH"
 git push origin $BRANCH
 git push origin --tags
-git tag | tail -1
+echo version:$VERSION
