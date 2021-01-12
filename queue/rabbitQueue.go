@@ -91,7 +91,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 	msgs, err := ch.Consume(
 		q.Name, // queue
 		"",     // consumer
-		true,   // auto ack ??????????????????????????????????????????
+		false,  // auto ack ??????????????????????????????????????????
 		false,  // exclusive
 		false,  // no local
 		false,  // no wait
@@ -105,9 +105,8 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 			log.Printf("Receiving message [exchange:%s] [keys:%s] [body:%s]", rq.rabbitExchange, keys, d.Body)
 
 			var dat map[string]interface{}
-			if err := json.Unmarshal(d.Body, &dat); err != nil {
-				panic(err)
-			}
+			err := json.Unmarshal(d.Body, &dat)
+			utils.PanicOnError(err)
 
 			fmt.Printf("==> dat %T %v\n", dat, dat)
 
@@ -123,7 +122,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 			fmt.Printf("==> message.Path %T %v\n", message.Path, message.Path)
 			fmt.Printf("==> message.TraceID %T %v\n", message.TraceID, message.TraceID)
 
-			err := consumer.Process(message)
+			err = consumer.Process(message)
 			utils.FailOnError(err, "Failed to process body")
 
 			if rq.routingKeyTo != "" {
