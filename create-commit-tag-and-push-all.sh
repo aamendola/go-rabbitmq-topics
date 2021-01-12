@@ -1,5 +1,9 @@
 #!/bin/bash
 
+
+LIGHT_GREEN='\033[0;31m'
+NC='\033[0m' # No Colo
+
 BRANCH=`git branch | awk '{print $2}'`
 VERSION=`cat .version`
 
@@ -14,4 +18,4 @@ COMMIT_HASH=`git log --pretty=format:'%h' -n 1`
 git tag -a $VERSION -m "Last commit $COMMIT_HASH"
 git push origin $BRANCH
 git push origin --tags
-git tag
+echo "${LIGHT_GREEN}${VERSION}${NC}"
