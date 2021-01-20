@@ -118,7 +118,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 			fmt.Println(message.Path)
 			fmt.Println(message.TraceID)
 
-			//fmt.Printf("==> message %T %v\n", message, message)
+			fmt.Printf("==> message %T %v\n", message, message)
 			//fmt.Printf("==> message.id %T %v\n", message.ID, message.ID)
 			//fmt.Printf("==> message.Path %T %v\n", message.Path, message.Path)
 			//fmt.Printf("==> message.TraceID %T %v\n", message.TraceID, message.TraceID)
