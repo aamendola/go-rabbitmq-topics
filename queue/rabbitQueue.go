@@ -26,6 +26,7 @@ type Message struct {
 	ID      string `json:"id"`
 	Path    string `json:"path"`
 	TraceID string `json:"traceId"`
+	Type    string `json:"type"`
 }
 
 func NewRabbitQueue(rabbitHost, rabbitUser, rabbitPassword, rabbitExchange, routingKeyFrom, routingKeyTo string) *RabbitQueue {
