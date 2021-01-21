@@ -14,3 +14,10 @@ COMMIT_HASH=`git log --pretty=format:'%h' -n 1`
 git tag -a $VERSION -m "Last commit $COMMIT_HASH"
 git push origin $BRANCH
 git push origin --tags
+
+MODULE_SEARCH=`cat go.mod | head -1 | awk '{print $2}'`
+MODULE_SEARCH="$MODULE_SEARCH v"
+echo 
+echo "Maybe you want to check these projects..."
+find ../ -name go.mod -exec grep -H "$MODULE_SEARCH" {} \;
+
