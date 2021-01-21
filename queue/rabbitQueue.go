@@ -121,6 +121,9 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 			err = consumer.Process(message)
 			utils.FailOnError(err, "Failed to process body")
 			//d.Nack(true, true)
+			log.Printf("##########################################################")
+			log.Printf("############################# ACK ########################")
+			log.Printf("##########################################################")
 			d.Ack(true)
 
 			if rq.routingKeyTo != "" {
