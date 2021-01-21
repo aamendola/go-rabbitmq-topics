@@ -111,15 +111,11 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 
 			message := Message{}
 			json.Unmarshal(d.Body, &message)
-			fmt.Println(message)
-			fmt.Println(message.ID)
-			fmt.Println(message.Path)
-			fmt.Println(message.TraceID)
 
-			//fmt.Printf("==> message %T %v\n", message, message)
-			//fmt.Printf("==> message.id %T %v\n", message.ID, message.ID)
-			//fmt.Printf("==> message.Path %T %v\n", message.Path, message.Path)
-			//fmt.Printf("==> message.TraceID %T %v\n", message.TraceID, message.TraceID)
+			//log.Printf("==> message %T %v\n", message, message)
+			//log.Printf("==> message.id %T %v\n", message.ID, message.ID)
+			//log.Printf("==> message.Path %T %v\n", message.Path, message.Path)
+			//log.Printf("==> message.TraceID %T %v\n", message.TraceID, message.TraceID)
 
 			err = consumer.Process(message)
 			utils.FailOnError(err, "Failed to process body")
