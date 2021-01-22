@@ -72,7 +72,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 	utils.FailOnError(err, "Failed to declare an exchange")
 
 	q, err := ch.QueueDeclare(
-		"azulado", // name
+		"", // name
 		true,      // durable
 		false,     // delete when unused
 		true,      // exclusive
@@ -118,11 +118,6 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 			message := Message{}
 			json.Unmarshal(d.Body, &message)
 
-			//log.Printf("==> message %T %v\n", message, message)
-			//log.Printf("==> message.id %T %v\n", message.ID, message.ID)
-			//log.Printf("==> message.Path %T %v\n", message.Path, message.Path)
-			//log.Printf("==> message.TraceID %T %v\n", message.TraceID, message.TraceID)
-
 			err = consumer.Process(message)
 			utils.FailOnError(err, "Failed to process body")
 			//d.Nack(true, true)
@@ -138,6 +133,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 					amqp.Publishing{
 						ContentType: "text/plain",
 						Body:        d.Body,
+						DeliveryMode: 2
 					})
 				utils.FailOnError(err, "Failed to publish a message")
 
