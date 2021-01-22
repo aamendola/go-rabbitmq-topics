@@ -11,7 +11,7 @@ import (
 
 // Consumer ...
 type Consumer interface {
-	Process(mesage Message) (err error)
+	Process(mesage Message) error
 }
 
 // RabbitQueue ...
