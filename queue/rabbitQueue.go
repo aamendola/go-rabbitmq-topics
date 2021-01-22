@@ -9,10 +9,12 @@ import (
 	"github.com/streadway/amqp"
 )
 
+// Consumer ...
 type Consumer interface {
 	Process(mesage Message) (err error)
 }
 
+// RabbitQueue ...
 type RabbitQueue struct {
 	rabbitHost     string
 	rabbitUser     string
@@ -22,6 +24,7 @@ type RabbitQueue struct {
 	routingKeyTo   string
 }
 
+// Message ...
 type Message struct {
 	ID      string `json:"id"`
 	Path    string `json:"path"`
@@ -29,6 +32,7 @@ type Message struct {
 	Type    string `json:"type"`
 }
 
+// NewRabbitQueue ...
 func NewRabbitQueue(rabbitHost, rabbitUser, rabbitPassword, rabbitExchange, routingKeyFrom, routingKeyTo string) *RabbitQueue {
 	rq := new(RabbitQueue)
 	rq.rabbitHost = rabbitHost
@@ -40,6 +44,7 @@ func NewRabbitQueue(rabbitHost, rabbitUser, rabbitPassword, rabbitExchange, rout
 	return rq
 }
 
+// MakeRabbitQueue ...
 func MakeRabbitQueue(rabbitHost, rabbitUser, rabbitPassword, rabbitExchange, routingKeyFrom, routingKeyTo string) RabbitQueue {
 	return RabbitQueue{rabbitHost, rabbitUser, rabbitPassword, rabbitExchange, routingKeyFrom, routingKeyTo}
 }
@@ -67,12 +72,12 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 	utils.FailOnError(err, "Failed to declare an exchange")
 
 	q, err := ch.QueueDeclare(
-		"",    // name
-		true,  // durable
-		false, // delete when unused
-		true,  // exclusive
-		false, // no-wait
-		nil,   // arguments
+		"azulado", // name
+		true,      // durable
+		false,     // delete when unused
+		true,      // exclusive
+		false,     // no-wait
+		nil,       // arguments
 	)
 	utils.FailOnError(err, "Failed to declare a queue")
 
