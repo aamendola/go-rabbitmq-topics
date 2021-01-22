@@ -68,7 +68,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 
 	q, err := ch.QueueDeclare(
 		"",    // name
-		false, // durable
+		true,  // durable
 		false, // delete when unused
 		true,  // exclusive
 		false, // no-wait
@@ -92,7 +92,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 	msgs, err := ch.Consume(
 		q.Name, // queue
 		"",     // consumer
-		false,  // auto ack ??????????????????????????????????????????
+		false,  // auto ack
 		false,  // exclusive
 		false,  // no local
 		false,  // no wait
