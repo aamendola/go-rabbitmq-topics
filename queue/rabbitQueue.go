@@ -72,12 +72,12 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 	utils.FailOnError(err, "Failed to declare an exchange")
 
 	q, err := ch.QueueDeclare(
-		"yellow", // name
-		true,     // durable
-		false,    // delete when unused
-		true,     // exclusive
-		false,    // no-wait
-		nil,      // arguments
+		"",    // name
+		true,  // durable
+		false, // delete when unused
+		true,  // exclusive
+		false, // no-wait
+		nil,   // arguments
 	)
 	utils.FailOnError(err, "Failed to declare a queue")
 
