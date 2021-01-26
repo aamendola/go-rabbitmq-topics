@@ -26,11 +26,11 @@ type RabbitQueue struct {
 
 // Message ...
 type Message struct {
-	ID      string `json:"id"`
-	Path    string `json:"path"`
-	TraceID string `json:"traceId"`
-	Type    string `json:"type"`
-	ImgURL  string `json:"ImageURL"`
+	ID       string `json:"id"`
+	Path     string `json:"path"`
+	TraceID  string `json:"traceId"`
+	Type     string `json:"type"`
+	ImageURL string `json:"ImageURL"`
 }
 
 // NewRabbitQueue ...
