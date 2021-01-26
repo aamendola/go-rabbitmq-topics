@@ -30,6 +30,7 @@ type Message struct {
 	Path    string `json:"path"`
 	TraceID string `json:"traceId"`
 	Type    string `json:"type"`
+	ImgURL  string `json:"ImageURL"`
 }
 
 // NewRabbitQueue ...
