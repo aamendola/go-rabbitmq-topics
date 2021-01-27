@@ -109,7 +109,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 	forever := make(chan bool)
 	go func() {
 		for d := range msgs {
-			log.Printf("\nReceiving message [exchange:%s] [keys:%s] [body:%s]", rq.rabbitExchange, keys, d.Body)
+			log.Printf("[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", rq.rabbitExchange, keys, d.Body)
 
 			var dat map[string]interface{}
 			err := json.Unmarshal(d.Body, &dat)
