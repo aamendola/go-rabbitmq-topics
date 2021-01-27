@@ -14,12 +14,10 @@ type Consumer interface {
 	Process(mesage Message) error
 }
 
-// RabbitQueue ...
-type RabbitQueue struct {
-	rabbitHost     string
-	rabbitUser     string
-	rabbitPassword string
-	rabbitExchange string
+// Client ...
+type Client struct {
+	uri            string
+	exchange       string
 	routingKeyFrom string
 	routingKeyTo   string
 }
@@ -33,27 +31,26 @@ type Message struct {
 	ImageURL string `json:"ImageURL"`
 }
 
-// NewRabbitQueue ...
-func NewRabbitQueue(rabbitHost, rabbitUser, rabbitPassword, rabbitExchange, routingKeyFrom, routingKeyTo string) *RabbitQueue {
-	rq := new(RabbitQueue)
-	rq.rabbitHost = rabbitHost
-	rq.rabbitUser = rabbitUser
-	rq.rabbitPassword = rabbitPassword
-	rq.rabbitExchange = rabbitExchange
-	rq.routingKeyFrom = routingKeyFrom
-	rq.routingKeyTo = routingKeyTo
-	return rq
+// NewClient ...
+func NewClient(host, user, password, exchange, routingKeyFrom, routingKeyTo string) *Client {
+	client := new(Client)
+	client.uri = fmt.Sprintf("amqp://%s:%s@%s:5672/", user, password, host)
+	client.exchange = exchange
+	client.routingKeyFrom = routingKeyFrom
+	client.routingKeyTo = routingKeyTo
+	return client
 }
 
-// MakeRabbitQueue ...
-func MakeRabbitQueue(rabbitHost, rabbitUser, rabbitPassword, rabbitExchange, routingKeyFrom, routingKeyTo string) RabbitQueue {
-	return RabbitQueue{rabbitHost, rabbitUser, rabbitPassword, rabbitExchange, routingKeyFrom, routingKeyTo}
+// MakeClient ...
+func MakeClient(host, user, password, exchange, routingKeyFrom, routingKeyTo string) Client {
+	uri := fmt.Sprintf("amqp://%s:%s@%s:5672/", user, password, host)
+	return Client{uri, exchange, routingKeyFrom, routingKeyTo}
 }
 
-func (rq RabbitQueue) Init(consumer Consumer) {
+// StartConsuming ...
+func (c Client) StartConsuming(consumer Consumer) {
 
-	uri := fmt.Sprintf("amqp://%s:%s@%s:5672/", rq.rabbitUser, rq.rabbitPassword, rq.rabbitHost)
-	conn, err := amqp.Dial(uri)
+	conn, err := amqp.Dial(c.uri)
 	utils.FailOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
@@ -62,13 +59,13 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 	defer ch.Close()
 
 	err = ch.ExchangeDeclare(
-		rq.rabbitExchange, // name
-		"topic",           // type
-		true,              // durable
-		false,             // auto-deleted
-		false,             // internal
-		false,             // no-wait
-		nil,               // arguments
+		c.exchange, // name
+		"topic",    // type
+		true,       // durable
+		false,      // auto-deleted
+		false,      // internal
+		false,      // no-wait
+		nil,        // arguments
 	)
 	utils.FailOnError(err, "Failed to declare an exchange")
 
@@ -82,14 +79,14 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 	)
 	utils.FailOnError(err, "Failed to declare a queue")
 
-	keys := []string{rq.routingKeyFrom}
+	keys := []string{c.routingKeyFrom}
 
 	for _, key := range keys {
-		log.Printf("Biding [queue:%s] to [exchange:%s] with [routingKey:%s]", q.Name, rq.rabbitExchange, key)
+		log.Printf("Biding [queue:%s] to [exchange:%s] with [routingKey:%s]", q.Name, c.exchange, key)
 		err = ch.QueueBind(
-			q.Name,            // queue name
-			key,               // routing key
-			rq.rabbitExchange, // exchange
+			q.Name,     // queue name
+			key,        // routing key
+			c.exchange, // exchange
 			false,
 			nil)
 		utils.FailOnError(err, "Failed to bind a queue")
@@ -109,7 +106,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 	forever := make(chan bool)
 	go func() {
 		for d := range msgs {
-			log.Printf("[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", rq.rabbitExchange, keys, d.Body)
+			log.Printf("[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, d.Body)
 
 			var dat map[string]interface{}
 			err := json.Unmarshal(d.Body, &dat)
@@ -123,12 +120,12 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 			//d.Nack(true, true)
 			d.Ack(false)
 
-			if rq.routingKeyTo != "" {
+			if c.routingKeyTo != "" {
 				err = ch.Publish(
-					rq.rabbitExchange, // exchange
-					rq.routingKeyTo,   // routing key
-					true,              // mandatory
-					false,             // immediate
+					c.exchange,     // exchange
+					c.routingKeyTo, // routing key
+					true,           // mandatory
+					false,          // immediate
 					amqp.Publishing{
 						ContentType:  "text/plain",
 						Body:         d.Body,
@@ -136,7 +133,7 @@ func (rq RabbitQueue) Init(consumer Consumer) {
 					})
 				utils.FailOnError(err, "Failed to publish a message")
 
-				log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", rq.rabbitExchange, rq.routingKeyTo, d.Body)
+				log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", c.exchange, c.routingKeyTo, d.Body)
 			} else {
 				log.Printf("There is not need to send anything")
 			}
