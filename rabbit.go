@@ -158,7 +158,7 @@ func showDeliveryInformation(delivery amqp.Delivery) {
 	log.Printf("UserId ....................... %s\n", delivery.UserId)
 	log.Printf("ConsumerTag .................. %s\n", delivery.ConsumerTag)
 	log.Printf("MessageCount ................. %c\n", delivery.MessageCount)
-	log.Printf("DeliveryTag .................. %c\n", delivery.DeliveryTag)
+	log.Printf("DeliveryTag .................. %d\n", delivery.DeliveryTag)
 	log.Printf("Redelivered .................. %t\n", delivery.Redelivered)
 	log.Printf("Exchange ..................... %s\n", delivery.Exchange)
 	log.Printf("RoutingKey ................... %s\n", delivery.RoutingKey)
