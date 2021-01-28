@@ -129,11 +129,15 @@ func (c Client) StartConsuming(consumer Consumer) {
 					Body:         delivery.Body,
 					DeliveryMode: 2,
 				}
+				mandatory := true
+				immediate := false
+				showPublishingInformation(c.exchange, c.routingKeyTo, mandatory, immediate, publishing)
+
 				err = ch.Publish(
 					c.exchange,     // exchange
 					c.routingKeyTo, // routing key
-					true,           // mandatory
-					false,          // immediate
+					mandatory,      // mandatory
+					immediate,      // immediate
 					publishing,
 				)
 				utils.FailOnError(err, "Failed to publish a message")
@@ -151,7 +155,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 }
 
 func showDeliveryInformation(delivery amqp.Delivery) {
-	log.Printf("======================================================\n")
+	log.Printf("=== [Delivery Information] ==========================\n")
 	log.Printf("CorrelationId ................ %s\n", delivery.CorrelationId)
 	log.Printf("ReplyTo ...................... %s\n", delivery.ReplyTo)
 	log.Printf("Expiration ................... %s\n", delivery.Expiration)
@@ -168,8 +172,13 @@ func showDeliveryInformation(delivery amqp.Delivery) {
 	log.Printf("======================================================\n")
 }
 
-func showPublishingInformation(publishing amqp.Publishing) {
-	log.Printf("======================================================\n")
+func showPublishingInformation(exchange, routingKeyTo string, mandatory, immediate bool, publishing amqp.Publishing) {
+	log.Printf("=== [Publishing Information] =========================\n")
+	log.Printf("Exchange ......................... %s\n", exchange)
+	log.Printf("RoutingKeyTo ..................... %s\n", routingKeyTo)
+	log.Printf("mandatory ........................ %t\n", mandatory)
+	log.Printf("immediate ........................ %t\n", immediate)
+	log.Printf("------------------------------------------------------\n")
 	log.Printf("ContentType ...................... %s\n", publishing.ContentType)
 	log.Printf("ContentEncoding .................. %s\n", publishing.ContentEncoding)
 	log.Printf("DeliveryMode ..................... %d\n", publishing.DeliveryMode)
