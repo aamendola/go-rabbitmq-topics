@@ -9,7 +9,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// Consumer ...
+// Consumer is the interface that you must implement if you want to consume messages
 type Consumer interface {
 	Process(mesage Message) error
 }
@@ -92,7 +92,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 		utils.FailOnError(err, "Failed to bind a queue")
 	}
 
-	msgs, err := ch.Consume(
+	deliveries, err := ch.Consume(
 		q.Name, // queue
 		"",     // consumer
 		false,  // auto ack
@@ -105,20 +105,20 @@ func (c Client) StartConsuming(consumer Consumer) {
 
 	forever := make(chan bool)
 	go func() {
-		for d := range msgs {
-			log.Printf("[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, d.Body)
+		for delivery := range deliveries {
+			log.Printf("\n[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body)
 
 			var dat map[string]interface{}
-			err := json.Unmarshal(d.Body, &dat)
+			err := json.Unmarshal(delivery.Body, &dat)
 			utils.PanicOnError(err)
 
 			message := Message{}
-			json.Unmarshal(d.Body, &message)
+			json.Unmarshal(delivery.Body, &message)
 
 			err = consumer.Process(message)
 			utils.FailOnError(err, "Failed to process body")
 			//d.Nack(true, true)
-			d.Ack(false)
+			delivery.Ack(false)
 
 			if c.routingKeyTo != "" {
 				err = ch.Publish(
@@ -128,12 +128,12 @@ func (c Client) StartConsuming(consumer Consumer) {
 					false,          // immediate
 					amqp.Publishing{
 						ContentType:  "text/plain",
-						Body:         d.Body,
+						Body:         delivery.Body,
 						DeliveryMode: 2,
 					})
 				utils.FailOnError(err, "Failed to publish a message")
 
-				log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", c.exchange, c.routingKeyTo, d.Body)
+				log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", c.exchange, c.routingKeyTo, delivery.Body)
 			} else {
 				log.Printf("There is not need to send anything")
 			}
@@ -143,4 +143,54 @@ func (c Client) StartConsuming(consumer Consumer) {
 
 	log.Printf("[*] Waiting for logs. To exit press CTRL+C")
 	<-forever
+}
+
+func showDeliveryInformation(delivery amqp.Delivery) {
+	log.Printf("======================================================\n")
+	log.Printf("CorrelationId ................%s\n", delivery.CorrelationId)
+	log.Printf("ReplyTo ................%s\n", delivery.ReplyTo)
+	log.Printf("Expiration ................%s\n", delivery.Expiration)
+	log.Printf("MessageId ................%s\n", delivery.MessageId)
+	log.Printf("Timestamp ................%s\n", delivery.Timestamp)
+	log.Printf("Type ................%s\n", delivery.Type)
+	log.Printf("UserId ................%s\n", delivery.UserId)
+	log.Printf("ConsumerTag ................%s\n", delivery.ConsumerTag)
+	log.Printf("MessageCount ................%s\n", delivery.MessageCount)
+	log.Printf("DeliveryTag ................%s\n", delivery.DeliveryTag)
+	log.Printf("Redelivered ................%s\n", delivery.Redelivered)
+	log.Printf("Exchange ................%s\n", delivery.Exchange)
+	log.Printf("RoutingKey ................%s\n", delivery.RoutingKey)
+	log.Printf("======================================================\n")
+	/*
+		Acknowledger Acknowledger // the channel from which this delivery arrived
+
+		Headers Table // Application or header exchange table
+
+		// Properties
+		ContentType     string    // MIME content type
+		ContentEncoding string    // MIME content encoding
+		DeliveryMode    uint8     // queue implementation use - non-persistent (1) or persistent (2)
+		Priority        uint8     // queue implementation use - 0 to 9
+		CorrelationId   string    // application use - correlation identifier
+		ReplyTo         string    // application use - address to reply to (ex: RPC)
+		Expiration      string    // implementation use - message expiration spec
+		MessageId       string    // application use - message identifier
+		Timestamp       time.Time // application use - message timestamp
+		Type            string    // application use - message type name
+		UserId          string    // application use - creating user - should be authenticated user
+		AppId           string    // application use - creating application id
+
+		// Valid only with Channel.Consume
+		ConsumerTag string
+
+		// Valid only with Channel.Get
+		MessageCount uint32
+
+		DeliveryTag uint64
+		Redelivered bool
+		Exchange    string // basic.publish exchange
+		RoutingKey  string // basic.publish routing key
+
+		Body []byte
+	*/
 }
