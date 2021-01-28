@@ -106,6 +106,8 @@ func (c Client) StartConsuming(consumer Consumer) {
 	forever := make(chan bool)
 	go func() {
 		for delivery := range deliveries {
+
+			showDeliveryInformation(delivery)
 			log.Printf("\n[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body)
 
 			var dat map[string]interface{}
