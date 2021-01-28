@@ -123,16 +123,19 @@ func (c Client) StartConsuming(consumer Consumer) {
 			delivery.Ack(false)
 
 			if c.routingKeyTo != "" {
+
+				publishing := amqp.Publishing{
+					ContentType:  "text/plain",
+					Body:         delivery.Body,
+					DeliveryMode: 2,
+				}
 				err = ch.Publish(
 					c.exchange,     // exchange
 					c.routingKeyTo, // routing key
 					true,           // mandatory
 					false,          // immediate
-					amqp.Publishing{
-						ContentType:  "text/plain",
-						Body:         delivery.Body,
-						DeliveryMode: 2,
-					})
+					publishing,
+				)
 				utils.FailOnError(err, "Failed to publish a message")
 
 				log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", c.exchange, c.routingKeyTo, delivery.Body)
@@ -163,36 +166,21 @@ func showDeliveryInformation(delivery amqp.Delivery) {
 	log.Printf("Exchange ..................... %s\n", delivery.Exchange)
 	log.Printf("RoutingKey ................... %s\n", delivery.RoutingKey)
 	log.Printf("======================================================\n")
-	/*
-		Acknowledger Acknowledger // the channel from which this delivery arrived
+}
 
-		Headers Table // Application or header exchange table
-
-		// Properties
-		ContentType     string    // MIME content type
-		ContentEncoding string    // MIME content encoding
-		DeliveryMode    uint8     // queue implementation use - non-persistent (1) or persistent (2)
-		Priority        uint8     // queue implementation use - 0 to 9
-		CorrelationId   string    // application use - correlation identifier
-		ReplyTo         string    // application use - address to reply to (ex: RPC)
-		Expiration      string    // implementation use - message expiration spec
-		MessageId       string    // application use - message identifier
-		Timestamp       time.Time // application use - message timestamp
-		Type            string    // application use - message type name
-		UserId          string    // application use - creating user - should be authenticated user
-		AppId           string    // application use - creating application id
-
-		// Valid only with Channel.Consume
-		ConsumerTag string
-
-		// Valid only with Channel.Get
-		MessageCount uint32
-
-		DeliveryTag uint64
-		Redelivered bool
-		Exchange    string // basic.publish exchange
-		RoutingKey  string // basic.publish routing key
-
-		Body []byte
-	*/
+func showPublishingInformation(publishing amqp.Publishing) {
+	log.Printf("======================================================\n")
+	log.Printf("ContentType ...................... %s\n", publishing.ContentType)
+	log.Printf("ContentEncoding .................. %s\n", publishing.ContentEncoding)
+	log.Printf("DeliveryMode ..................... %d\n", publishing.DeliveryMode)
+	log.Printf("Priority ......................... %d\n", publishing.Priority)
+	log.Printf("CorrelationId .................... %s\n", publishing.CorrelationId)
+	log.Printf("ReplyTo .......................... %s\n", publishing.ReplyTo)
+	log.Printf("Expiration ....................... %s\n", publishing.Expiration)
+	log.Printf("MessageId ........................ %s\n", publishing.MessageId)
+	log.Printf("Timestamp ........................ %s\n", publishing.Timestamp)
+	log.Printf("Type ............................. %s\n", publishing.Type)
+	log.Printf("UserId ........................... %s\n", publishing.UserId)
+	log.Printf("AppId ............................ %s\n", publishing.AppId)
+	log.Printf("======================================================\n")
 }
