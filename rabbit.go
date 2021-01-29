@@ -122,10 +122,15 @@ func (c Client) StartConsuming(consumer Consumer) {
 			json.Unmarshal(delivery.Body, &message)
 
 			if c.blacklist != nil {
-				collections.Contains(c.blacklist, message.ID)
-				delivery.Reject(false)
-				log.Printf("\n[*] MessageId %s was rejected", message.ID)
-				continue
+				exists := collections.Contains(c.blacklist, message.ID)
+				log.Printf("blacklist = %s", c.blacklist)
+				if exists {
+					delivery.Reject(false)
+					log.Printf("\n[*] MessageId %s was rejected", message.ID)
+					continue
+				} else {
+					log.Printf("\n[*] MessageId %s was not found", message.ID)
+				}
 			}
 
 			err = consumer.Process(message)
