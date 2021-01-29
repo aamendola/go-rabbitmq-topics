@@ -115,10 +115,11 @@ func (c Client) StartConsuming(consumer Consumer) {
 		for delivery := range deliveries {
 
 			if counterBorrrar%3 == 0 {
-				log.Printf("\n[*] We are testing. The message will delayed")
+				log.Printf("\n[*] We are testing. [counterBorrrar=%d] .The message will delayed", counterBorrrar)
 				time.Sleep(5 * time.Second)
 				time.Sleep(5 * time.Minute)
 			}
+			counterBorrrar = counterBorrrar + 1
 
 			log.Printf("\n[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body)
 			// showDeliveryInformation(delivery)
