@@ -2,5 +2,7 @@ github.com/aamendola/go-utils v1.0.1 h1:xKV/dyL8LRXszUq3wAoSIzovJbWUmz5IACIWcOsT
 github.com/aamendola/go-utils v1.0.1/go.mod h1:tvSCA/vypwXa6sPN+nMB9aqnGu3FEvbBxHfTb66Q3/s=
 github.com/aamendola/go-utils v1.0.3 h1:XU5jLghoG3iSRExI70J6ieypm6Bi6hXdmgfgcE0L930=
 github.com/aamendola/go-utils v1.0.3/go.mod h1:tvSCA/vypwXa6sPN+nMB9aqnGu3FEvbBxHfTb66Q3/s=
+github.com/aamendola/go-utils v1.0.33 h1:bBgHq+9Steu3inANLmtyJIzO5G+CxuEyd4muhGBbYQM=
+github.com/aamendola/go-utils v1.0.33/go.mod h1:tvSCA/vypwXa6sPN+nMB9aqnGu3FEvbBxHfTb66Q3/s=
 github.com/streadway/amqp v1.0.0 h1:kuuDrUJFZL1QYL9hUNuCxNObNzB0bV/ZG5jV3RWAQgo=
 github.com/streadway/amqp v1.0.0/go.mod h1:AZpEONHx3DKn8O/DFsRAY58/XVQiIPMTMB1SddzLXVw=

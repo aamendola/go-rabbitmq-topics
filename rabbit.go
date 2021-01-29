@@ -6,6 +6,7 @@ import (
 	"log"
 
 	utils "github.com/aamendola/go-utils"
+	"github.com/aamendola/go-utils/collections"
 	"github.com/streadway/amqp"
 )
 
@@ -42,13 +43,10 @@ func NewClient(host, user, password, exchange, queue, routingKeyFrom, routingKey
 // MakeClient ...
 func MakeClient(host, user, password, exchange, queue, routingKeyFrom, routingKeyTo string, blacklist ...string) Client {
 	uri := fmt.Sprintf("amqp://%s:%s@%s:5672/", user, password, host)
-	var bl []string
 	if len(blacklist) > 1 {
 		panic("The only optional parameter is 'blacklist'")
-	} else if len(blacklist) == 1 {
-		bl = blacklist
 	}
-	return Client{uri, exchange, queue, routingKeyFrom, routingKeyTo, bl}
+	return Client{uri, exchange, queue, routingKeyFrom, routingKeyTo, blacklist}
 }
 
 // StartConsuming ...
@@ -123,9 +121,15 @@ func (c Client) StartConsuming(consumer Consumer) {
 			message := Message{}
 			json.Unmarshal(delivery.Body, &message)
 
+			if c.blacklist != nil {
+				collections.Contains(c.blacklist, message.ID)
+				delivery.Reject(false)
+				log.Printf("\n[*] MessageId %s was rejected", message.ID)
+				continue
+			}
+
 			err = consumer.Process(message)
 			utils.FailOnError(err, "Failed to process body")
-			//d.Nack(true, true)
 			delivery.Ack(false)
 
 			if c.routingKeyTo != "" {
