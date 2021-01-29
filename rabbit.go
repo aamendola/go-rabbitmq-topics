@@ -18,6 +18,7 @@ type Consumer interface {
 type Client struct {
 	uri            string
 	exchange       string
+	queue          string
 	routingKeyFrom string
 	routingKeyTo   string
 }
@@ -32,19 +33,20 @@ type Message struct {
 }
 
 // NewClient ...
-func NewClient(host, user, password, exchange, routingKeyFrom, routingKeyTo string) *Client {
+func NewClient(host, user, password, exchange, queue, routingKeyFrom, routingKeyTo string) *Client {
 	client := new(Client)
 	client.uri = fmt.Sprintf("amqp://%s:%s@%s:5672/", user, password, host)
 	client.exchange = exchange
+	client.queue = queue
 	client.routingKeyFrom = routingKeyFrom
 	client.routingKeyTo = routingKeyTo
 	return client
 }
 
 // MakeClient ...
-func MakeClient(host, user, password, exchange, routingKeyFrom, routingKeyTo string) Client {
+func MakeClient(host, user, password, exchange, queue, routingKeyFrom, routingKeyTo string) Client {
 	uri := fmt.Sprintf("amqp://%s:%s@%s:5672/", user, password, host)
-	return Client{uri, exchange, routingKeyFrom, routingKeyTo}
+	return Client{uri, exchange, queue, routingKeyFrom, routingKeyTo}
 }
 
 // StartConsuming ...
@@ -94,13 +96,13 @@ func (c Client) StartConsuming(consumer Consumer) {
 	}
 
 	deliveries, err := channel.Consume(
-		queue.Name, // queue
-		"",         // consumer
-		false,      // auto ack
-		false,      // exclusive
-		false,      // no local
-		false,      // no wait
-		nil,        // args
+		c.queue, // queue
+		"",      // consumer
+		false,   // auto ack
+		false,   // exclusive
+		false,   // no local
+		false,   // no wait
+		nil,     // args
 	)
 	utils.FailOnError(err, "Failed to register a consumer")
 
