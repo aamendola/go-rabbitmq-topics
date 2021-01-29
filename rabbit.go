@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"time"
 
 	utils "github.com/aamendola/go-utils"
 	"github.com/streadway/amqp"
@@ -110,16 +109,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 	forever := make(chan bool)
 	go func() {
 
-		counterBorrrar := 0
-
 		for delivery := range deliveries {
-
-			if counterBorrrar%3 == 0 {
-				log.Printf("\n[*] We are testing. [counterBorrrar=%d] .The message will delayed", counterBorrrar)
-				time.Sleep(5 * time.Second)
-				time.Sleep(5 * time.Minute)
-			}
-			counterBorrrar = counterBorrrar + 1
 
 			log.Printf("\n[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body)
 			// showDeliveryInformation(delivery)
