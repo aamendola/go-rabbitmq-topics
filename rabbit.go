@@ -54,11 +54,11 @@ func (c Client) StartConsuming(consumer Consumer) {
 	utils.FailOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
-	ch, err := conn.Channel()
+	channel, err := conn.Channel()
 	utils.FailOnError(err, "Failed to open a channel")
-	defer ch.Close()
+	defer channel.Close()
 
-	err = ch.ExchangeDeclare(
+	err = channel.ExchangeDeclare(
 		c.exchange, // name
 		"topic",    // type
 		true,       // durable
@@ -69,22 +69,23 @@ func (c Client) StartConsuming(consumer Consumer) {
 	)
 	utils.FailOnError(err, "Failed to declare an exchange")
 
-	q, err := ch.QueueDeclare(
-		"",    // name
-		true,  // durable
-		false, // delete when unused
-		true,  // exclusive
-		false, // no-wait
-		nil,   // arguments
+	queue, err := channel.QueueDeclare(
+		"sarlacatunga", // name
+		true,           // durable
+		false,          // delete when unused
+		true,           // exclusive
+		false,          // no-wait
+		nil,            // arguments
 	)
 	utils.FailOnError(err, "Failed to declare a queue")
+	showQueueInformation(queue)
 
 	keys := []string{c.routingKeyFrom}
 
 	for _, key := range keys {
-		log.Printf("Biding [queue:%s] to [exchange:%s] with [routingKey:%s]", q.Name, c.exchange, key)
-		err = ch.QueueBind(
-			q.Name,     // queue name
+		log.Printf("Biding [queue:%s] to [exchange:%s] with [routingKey:%s]", queue.Name, c.exchange, key)
+		err = channel.QueueBind(
+			queue.Name, // queue name
 			key,        // routing key
 			c.exchange, // exchange
 			false,
@@ -92,14 +93,14 @@ func (c Client) StartConsuming(consumer Consumer) {
 		utils.FailOnError(err, "Failed to bind a queue")
 	}
 
-	deliveries, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		false,  // auto ack
-		false,  // exclusive
-		false,  // no local
-		false,  // no wait
-		nil,    // args
+	deliveries, err := channel.Consume(
+		queue.Name, // queue
+		"",         // consumer
+		false,      // auto ack
+		false,      // exclusive
+		false,      // no local
+		false,      // no wait
+		nil,        // args
 	)
 	utils.FailOnError(err, "Failed to register a consumer")
 
@@ -107,8 +108,8 @@ func (c Client) StartConsuming(consumer Consumer) {
 	go func() {
 		for delivery := range deliveries {
 
-			showDeliveryInformation(delivery)
 			log.Printf("\n[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body)
+			showDeliveryInformation(delivery)
 
 			var dat map[string]interface{}
 			err := json.Unmarshal(delivery.Body, &dat)
@@ -127,13 +128,13 @@ func (c Client) StartConsuming(consumer Consumer) {
 				publishing := amqp.Publishing{
 					ContentType:  "text/plain",
 					Body:         delivery.Body,
-					DeliveryMode: 2,
+					DeliveryMode: amqp.Persistent,
 				}
 				mandatory := true
 				immediate := false
 				showPublishingInformation(c.exchange, c.routingKeyTo, mandatory, immediate, publishing)
 
-				err = ch.Publish(
+				err = channel.Publish(
 					c.exchange,     // exchange
 					c.routingKeyTo, // routing key
 					mandatory,      // mandatory
@@ -191,5 +192,13 @@ func showPublishingInformation(exchange, routingKeyTo string, mandatory, immedia
 	log.Printf("Type ............................. %s\n", publishing.Type)
 	log.Printf("UserId ........................... %s\n", publishing.UserId)
 	log.Printf("AppId ............................ %s\n", publishing.AppId)
+	log.Printf("======================================================\n")
+}
+
+func showQueueInformation(queue amqp.Queue) {
+	log.Printf("=== [Queue Information] ==============================\n")
+	log.Printf("Name ............................. %s\n", queue.Name)
+	log.Printf("Messages ......................... %d\n", queue.Messages)
+	log.Printf("Consumers ........................ %d\n", queue.Consumers)
 	log.Printf("======================================================\n")
 }
