@@ -72,12 +72,12 @@ func (c Client) StartConsuming(consumer Consumer) {
 	utils.FailOnError(err, "Failed to declare an exchange")
 
 	queue, err := channel.QueueDeclare(
-		"stanley", // name
-		true,      // durable
-		false,     // delete when unused
-		false,     // exclusive
-		false,     // no-wait
-		nil,       // arguments
+		c.queue, // name
+		true,    // durable
+		false,   // delete when unused
+		false,   // exclusive
+		false,   // no-wait
+		nil,     // arguments
 	)
 	utils.FailOnError(err, "Failed to declare a queue")
 	showQueueInformation(queue)
@@ -96,13 +96,13 @@ func (c Client) StartConsuming(consumer Consumer) {
 	}
 
 	deliveries, err := channel.Consume(
-		c.queue, // queue
-		"",      // consumer
-		false,   // auto ack
-		false,   // exclusive
-		false,   // no local
-		false,   // no wait
-		nil,     // args
+		queue.Name, // queue
+		"",         // consumer
+		false,      // auto ack
+		false,      // exclusive
+		false,      // no local
+		false,      // no wait
+		nil,        // args
 	)
 	utils.FailOnError(err, "Failed to register a consumer")
 
