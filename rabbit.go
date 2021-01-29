@@ -33,18 +33,13 @@ type Message struct {
 }
 
 // NewClient ...
-func NewClient(host, user, password, exchange, queue, routingKeyFrom, routingKeyTo string) *Client {
-	client := new(Client)
-	client.uri = fmt.Sprintf("amqp://%s:%s@%s:5672/", user, password, host)
-	client.exchange = exchange
-	client.queue = queue
-	client.routingKeyFrom = routingKeyFrom
-	client.routingKeyTo = routingKeyTo
-	return client
+func NewClient(host, user, password, exchange, queue, routingKeyFrom, routingKeyTo string, blacklist ...string) *Client {
+	client := MakeClient(host, user, password, exchange, queue, routingKeyFrom, routingKeyTo, blacklist...)
+	return &client
 }
 
 // MakeClient ...
-func MakeClient(host, user, password, exchange, queue, routingKeyFrom, routingKeyTo string) Client {
+func MakeClient(host, user, password, exchange, queue, routingKeyFrom, routingKeyTo string, blacklist ...string) Client {
 	uri := fmt.Sprintf("amqp://%s:%s@%s:5672/", user, password, host)
 	return Client{uri, exchange, queue, routingKeyFrom, routingKeyTo}
 }
