@@ -70,12 +70,12 @@ func (c Client) StartConsuming(consumer Consumer) {
 	utils.FailOnError(err, "Failed to declare an exchange")
 
 	queue, err := channel.QueueDeclare(
-		"sarlacatunga", // name
-		true,           // durable
-		false,          // delete when unused
-		true,           // exclusive
-		false,          // no-wait
-		nil,            // arguments
+		"",    // name
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
 	)
 	utils.FailOnError(err, "Failed to declare a queue")
 	showQueueInformation(queue)
