@@ -21,6 +21,7 @@ type Client struct {
 	queue          string
 	routingKeyFrom string
 	routingKeyTo   string
+	blacklist      []string
 }
 
 // Message ...
@@ -41,7 +42,13 @@ func NewClient(host, user, password, exchange, queue, routingKeyFrom, routingKey
 // MakeClient ...
 func MakeClient(host, user, password, exchange, queue, routingKeyFrom, routingKeyTo string, blacklist ...string) Client {
 	uri := fmt.Sprintf("amqp://%s:%s@%s:5672/", user, password, host)
-	return Client{uri, exchange, queue, routingKeyFrom, routingKeyTo}
+	var bl []string
+	if len(blacklist) > 1 {
+		panic("The only optional parameter is 'blacklist'")
+	} else if len(blacklist) == 1 {
+		bl = blacklist
+	}
+	return Client{uri, exchange, queue, routingKeyFrom, routingKeyTo, bl}
 }
 
 // StartConsuming ...
