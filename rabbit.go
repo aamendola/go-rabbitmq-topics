@@ -123,13 +123,10 @@ func (c Client) StartConsuming(consumer Consumer) {
 
 			if c.blacklist != nil {
 				exists := collections.Contains(c.blacklist, message.ID)
-				log.Printf("blacklist = %s", c.blacklist)
 				if exists {
 					delivery.Reject(false)
 					log.Printf("\n[*] MessageId %s was rejected", message.ID)
 					continue
-				} else {
-					log.Printf("\n[*] MessageId %s was not found", message.ID)
 				}
 			}
 
