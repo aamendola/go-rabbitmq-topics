@@ -111,7 +111,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 
 		for delivery := range deliveries {
 
-			log.Printf("\n[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body)
+			log.Printf("[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body)
 			// showDeliveryInformation(delivery)
 
 			var dat map[string]interface{}
@@ -125,7 +125,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 				exists := collections.Contains(c.blacklist, message.ID)
 				if exists {
 					delivery.Reject(false)
-					log.Printf("\n[*] MessageId %s was rejected", message.ID)
+					log.Printf("[*] MessageId %s was rejected", message.ID)
 					continue
 				}
 			}
