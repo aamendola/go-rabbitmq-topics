@@ -1,4 +1,4 @@
-module github.com/aamendola/rabbitmq-topics
+module github.com/aamendola/go-rabbitmq-topics
 
 go 1.15
 
