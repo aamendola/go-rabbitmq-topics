@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/aamendola/go-rabbitmq-topics/queuer"
+	queuer "github.com/aamendola/go-rabbitmq-topics"
 	utils "github.com/aamendola/go-utils"
 	"github.com/aamendola/go-utils/collections"
 	"github.com/streadway/amqp"
