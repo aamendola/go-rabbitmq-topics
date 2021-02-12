@@ -10,11 +10,6 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// Consumer is the interface that you must implement if you want to consume messages
-type Consumer interface {
-	Process(mesage Message) error
-}
-
 // Client ...
 type Client struct {
 	uri            string
@@ -23,15 +18,6 @@ type Client struct {
 	routingKeyFrom string
 	routingKeyTo   string
 	blacklist      []string
-}
-
-// Message ...
-type Message struct {
-	ID       string `json:"id"`
-	Path     string `json:"path"`
-	TraceID  string `json:"traceId"`
-	Type     string `json:"type"`
-	ImageURL string `json:"ImageURL"`
 }
 
 // NewClient ...
