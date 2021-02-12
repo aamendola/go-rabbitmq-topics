@@ -105,7 +105,7 @@ func (c Client) StartConsuming(consumer queuer.Consumer) {
 			err := json.Unmarshal(delivery.Body, &dat)
 			utils.PanicOnError(err)
 
-			message := Message{}
+			message := queuer.Message{}
 			json.Unmarshal(delivery.Body, &message)
 
 			if c.blacklist != nil {
