@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/aamendola/go-rabbitmq-topics/queuer"
 	utils "github.com/aamendola/go-utils"
 	"github.com/aamendola/go-utils/collections"
 	"github.com/streadway/amqp"
@@ -36,7 +37,7 @@ func MakeClient(host, user, password, exchange, queue, routingKeyFrom, routingKe
 }
 
 // StartConsuming ...
-func (c Client) StartConsuming(consumer Consumer) {
+func (c Client) StartConsuming(consumer queuer.Consumer) {
 
 	conn, err := amqp.Dial(c.uri)
 	utils.FailOnError(err, "Failed to connect to RabbitMQ")
