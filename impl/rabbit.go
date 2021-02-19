@@ -98,7 +98,6 @@ func (c Client) StartConsuming(consumer queuer.Consumer) {
 
 		for delivery := range deliveries {
 
-			log.Printf("[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body)
 			// showDeliveryInformation(delivery)
 
 			var dat map[string]interface{}
@@ -107,6 +106,8 @@ func (c Client) StartConsuming(consumer queuer.Consumer) {
 
 			message := queuer.Message{}
 			json.Unmarshal(delivery.Body, &message)
+
+			logutils.Info(message.ID, fmt.Sprintf("[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body))
 
 			if c.blacklist != nil {
 				exists := collections.Contains(c.blacklist, message.ID)
