@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	utils "github.com/aamendola/go-utils"
+	logutils "github.com/aamendola/go-utils/log"
 	"github.com/aamendola/go-utils/collections"
 	"github.com/streadway/amqp"
 )
@@ -54,11 +54,11 @@ func MakeClient(host, user, password, exchange, queue, routingKeyFrom, routingKe
 func (c Client) StartConsuming(consumer Consumer) {
 
 	conn, err := amqp.Dial(c.uri)
-	utils.FailOnError(err, "Failed to connect to RabbitMQ")
+	logutils.Panic(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
 	channel, err := conn.Channel()
-	utils.FailOnError(err, "Failed to open a channel")
+	logutils.Panic(err, "Failed to open a channel")
 	defer channel.Close()
 
 	err = channel.ExchangeDeclare(
@@ -70,7 +70,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 		false,      // no-wait
 		nil,        // arguments
 	)
-	utils.FailOnError(err, "Failed to declare an exchange")
+	logutils.Panic(err, "Failed to declare an exchange")
 
 	queue, err := channel.QueueDeclare(
 		c.queue, // name
@@ -80,7 +80,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 		false,   // no-wait
 		nil,     // arguments
 	)
-	utils.FailOnError(err, "Failed to declare a queue")
+	logutils.Panic(err, "Failed to declare a queue")
 	//showQueueInformation(queue)
 
 	keys := []string{c.routingKeyFrom}
@@ -93,7 +93,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 			c.exchange, // exchange
 			false,
 			nil)
-		utils.FailOnError(err, "Failed to bind a queue")
+		logutils.Panic(err, "Failed to bind a queue")
 	}
 
 	deliveries, err := channel.Consume(
@@ -105,7 +105,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 		false,      // no wait
 		nil,        // args
 	)
-	utils.FailOnError(err, "Failed to register a consumer")
+	logutils.Panic(err, "Failed to register a consumer")
 
 	forever := make(chan bool)
 	go func() {
@@ -117,7 +117,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 
 			var dat map[string]interface{}
 			err := json.Unmarshal(delivery.Body, &dat)
-			utils.PanicOnError(err)
+			logutils.Panic(err)
 
 			message := Message{}
 			json.Unmarshal(delivery.Body, &message)
@@ -132,7 +132,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 			}
 
 			err = consumer.Process(message)
-			utils.FailOnError(err, "Failed to process body")
+			logutils.Panic(err,"Failed to process body")
 			delivery.Ack(false)
 
 			if c.routingKeyTo != "" {
@@ -153,7 +153,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 					immediate,      // immediate
 					publishing,
 				)
-				utils.FailOnError(err, "Failed to publish a message")
+				logutils.Panic(err, "Failed to publish a message")
 
 				log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", c.exchange, c.routingKeyTo, delivery.Body)
 			} else {
