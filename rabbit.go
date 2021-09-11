@@ -32,6 +32,7 @@ type Message struct {
 	TraceID  string `json:"traceId"`
 	Type     string `json:"type"`
 	ImageURL string `json:"ImageURL"`
+	Url string `json:"url"`
 }
 
 // NewClient ...
