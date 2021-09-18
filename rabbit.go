@@ -81,7 +81,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 		nil,     // arguments
 	)
 	logutils.Panic(err, "Failed to declare a queue")
-	//showQueueInformation(queue)
+	showQueueInformation(queue)
 
 	keys := []string{c.routingKeyFrom}
 
@@ -113,7 +113,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 		for delivery := range deliveries {
 
 			log.Printf("[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body)
-			// showDeliveryInformation(delivery)
+			showDeliveryInformation(delivery)
 
 			var dat map[string]interface{}
 			err := json.Unmarshal(delivery.Body, &dat)
@@ -144,7 +144,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 				}
 				mandatory := true
 				immediate := false
-				//showPublishingInformation(c.exchange, c.routingKeyTo, mandatory, immediate, publishing)
+				showPublishingInformation(c.exchange, c.routingKeyTo, mandatory, immediate, publishing)
 
 				err = channel.Publish(
 					c.exchange,     // exchange
