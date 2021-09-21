@@ -12,7 +12,7 @@ import (
 
 // Consumer is the interface that you must implement if you want to consume messages
 type Consumer interface {
-	Process(mesage Message) error
+	Process(deliveryTag uint64, mesage Message) error
 }
 
 // Client ...
@@ -32,7 +32,7 @@ type Message struct {
 	TraceID  string `json:"traceId"`
 	Type     string `json:"type"`
 	ImageURL string `json:"ImageURL"`
-	Url string `json:"url"`
+	Url      string `json:"url"`
 }
 
 // NewClient ...
@@ -131,7 +131,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 				}
 			}
 
-			err = consumer.Process(message)
+			err = consumer.Process(delivery.DeliveryTag, message)
 			if err != nil {
 				delivery.Nack(false, true)
 			} else {
