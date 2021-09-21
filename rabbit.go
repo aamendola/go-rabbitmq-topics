@@ -133,6 +133,8 @@ func (c Client) StartConsuming(consumer Consumer) {
 
 			err = consumer.Process(message)
 			if err != nil {
+				delivery.Nack(false, true)
+			} else {
 				delivery.Ack(false)
 
 				if c.routingKeyTo != "" {
@@ -159,9 +161,6 @@ func (c Client) StartConsuming(consumer Consumer) {
 				} else {
 					log.Printf("There is not need to send anything")
 				}
-
-			} else {
-				delivery.Nack(false, true)
 			}
 		}
 	}()
