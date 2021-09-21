@@ -132,34 +132,37 @@ func (c Client) StartConsuming(consumer Consumer) {
 			}
 
 			err = consumer.Process(message)
-			logutils.Panic(err,"Failed to process body")
-			delivery.Ack(false)
+			if err != nil {
+				delivery.Ack(false)
 
-			if c.routingKeyTo != "" {
+				if c.routingKeyTo != "" {
 
-				publishing := amqp.Publishing{
-					ContentType:  "text/plain",
-					Body:         delivery.Body,
-					DeliveryMode: amqp.Persistent,
+					publishing := amqp.Publishing{
+						ContentType:  "text/plain",
+						Body:         delivery.Body,
+						DeliveryMode: amqp.Persistent,
+					}
+					mandatory := true
+					immediate := false
+					showPublishingInformation(c.exchange, c.routingKeyTo, mandatory, immediate, publishing)
+
+					err = channel.Publish(
+						c.exchange,     // exchange
+						c.routingKeyTo, // routing key
+						mandatory,      // mandatory
+						immediate,      // immediate
+						publishing,
+					)
+					logutils.Panic(err, "Failed to publish a message")
+
+					log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", c.exchange, c.routingKeyTo, delivery.Body)
+				} else {
+					log.Printf("There is not need to send anything")
 				}
-				mandatory := true
-				immediate := false
-				showPublishingInformation(c.exchange, c.routingKeyTo, mandatory, immediate, publishing)
 
-				err = channel.Publish(
-					c.exchange,     // exchange
-					c.routingKeyTo, // routing key
-					mandatory,      // mandatory
-					immediate,      // immediate
-					publishing,
-				)
-				logutils.Panic(err, "Failed to publish a message")
-
-				log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", c.exchange, c.routingKeyTo, delivery.Body)
 			} else {
-				log.Printf("There is not need to send anything")
+				delivery.Nack(false, true)
 			}
-
 		}
 	}()
 
