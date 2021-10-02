@@ -17,12 +17,13 @@ type Consumer interface {
 
 // Client ...
 type Client struct {
-	uri            string
-	exchange       string
-	queue          string
-	routingKeyFrom string
-	routingKeyTo   string
-	blacklist      []string
+	uri             string
+	exchange        string
+	queue           string
+	routingKeyFrom  string
+	routingKeyTo    string
+	routingKeyErros string
+	blacklist       []string
 }
 
 // Message ...
@@ -36,18 +37,18 @@ type Message struct {
 }
 
 // NewClient ...
-func NewClient(host, user, password, exchange, queue, routingKeyFrom, routingKeyTo string, blacklist ...string) *Client {
-	client := MakeClient(host, user, password, exchange, queue, routingKeyFrom, routingKeyTo, blacklist...)
+func NewClient(host, user, password, exchange, queue, routingKeyFrom, routingKeyTo, routingKeyErros string, blacklist ...string) *Client {
+	client := MakeClient(host, user, password, exchange, queue, routingKeyFrom, routingKeyTo, routingKeyErros, blacklist...)
 	return &client
 }
 
 // MakeClient ...
-func MakeClient(host, user, password, exchange, queue, routingKeyFrom, routingKeyTo string, blacklist ...string) Client {
+func MakeClient(host, user, password, exchange, queue, routingKeyFrom, routingKeyTo, routingKeyErros string, blacklist ...string) Client {
 	uri := fmt.Sprintf("amqp://%s:%s@%s:5672/", user, password, host)
 	if len(blacklist) > 1 {
 		panic("The only optional parameter is 'blacklist'")
 	}
-	return Client{uri, exchange, queue, routingKeyFrom, routingKeyTo, blacklist}
+	return Client{uri, exchange, queue, routingKeyFrom, routingKeyTo, routingKeyErros, blacklist}
 }
 
 // StartConsuming ...
@@ -133,7 +134,29 @@ func (c Client) StartConsuming(consumer Consumer) {
 
 			err = consumer.Process(delivery.DeliveryTag, message)
 			if err != nil {
-				delivery.Nack(false, true)
+				// delivery.Nack(false, true)
+				delivery.Ack(false)
+
+				publishing := amqp.Publishing{
+					ContentType:  "text/plain",
+					Body:         delivery.Body,
+					DeliveryMode: amqp.Persistent,
+				}
+				mandatory := true
+				immediate := false
+				showPublishingInformation(c.exchange, c.routingKeyErros, mandatory, immediate, publishing)
+
+				err = channel.Publish(
+					c.exchange,        // exchange
+					c.routingKeyErros, // routing key
+					mandatory,         // mandatory
+					immediate,         // immediate
+					publishing,
+				)
+				logutils.Panic(err, "Failed to publish a message")
+
+				log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", c.exchange, c.routingKeyErros, delivery.Body)
+
 			} else {
 				delivery.Ack(false)
 
