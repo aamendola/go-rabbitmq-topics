@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	logutils "github.com/aamendola/go-utils/log"
 	"github.com/aamendola/go-utils/collections"
@@ -141,6 +142,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 					ContentType:  "text/plain",
 					Body:         delivery.Body,
 					DeliveryMode: amqp.Persistent,
+					Timestamp: time.Now(),
 				}
 				mandatory := true
 				immediate := false
