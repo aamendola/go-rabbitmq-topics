@@ -111,7 +111,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 
 	forever := make(chan bool)
 	go func() {
-
+		log.Printf("[----------------------------------------------------------------]")
 		for delivery := range deliveries {
 
 			log.Printf("[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body)
