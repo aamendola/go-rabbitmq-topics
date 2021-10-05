@@ -24,7 +24,9 @@ type Client struct {
 	routingKeyFrom  string
 	routingKeyTo    string
 	routingKeyErros string
+	errorProcesor   bool
 	blacklist       []string
+
 }
 
 // Message ...
@@ -109,89 +111,16 @@ func (c Client) StartConsuming(consumer Consumer) {
 	)
 	logutils.Panic(err, "Failed to register a consumer")
 
-	forever := make(chan bool)
-	go func() {
-		log.Printf("[----------------------------------------------------------------]")
-		for delivery := range deliveries {
-
-			log.Printf("[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body)
-			showDeliveryInformation(delivery)
-
-			var dat map[string]interface{}
-			err := json.Unmarshal(delivery.Body, &dat)
-			logutils.Panic(err)
-
-			message := Message{}
-			json.Unmarshal(delivery.Body, &message)
-
-			if c.blacklist != nil {
-				exists := collections.Contains(c.blacklist, message.ID)
-				if exists {
-					delivery.Reject(false)
-					log.Printf("[*] MessageId %s was rejected", message.ID)
-					continue
-				}
-			}
-
-			err = consumer.Process(delivery.DeliveryTag, message)
-			if err != nil {
-				// delivery.Nack(false, true)
-				delivery.Ack(false)
-
-				publishing := amqp.Publishing{
-					ContentType:  "text/plain",
-					Body:         delivery.Body,
-					DeliveryMode: amqp.Persistent,
-					Timestamp: time.Now(),
-				}
-				mandatory := true
-				immediate := false
-				showPublishingInformation(c.exchange, c.routingKeyErros, mandatory, immediate, publishing)
-
-				err = channel.Publish(
-					c.exchange,        // exchange
-					c.routingKeyErros, // routing key
-					mandatory,         // mandatory
-					immediate,         // immediate
-					publishing,
-				)
-				logutils.Panic(err, "Failed to publish a message")
-
-				log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", c.exchange, c.routingKeyErros, delivery.Body)
-
-			} else {
-				delivery.Ack(false)
-
-				if c.routingKeyTo != "" {
-
-					publishing := amqp.Publishing{
-						ContentType:  "text/plain",
-						Body:         delivery.Body,
-						DeliveryMode: amqp.Persistent,
-					}
-					mandatory := true
-					immediate := false
-					showPublishingInformation(c.exchange, c.routingKeyTo, mandatory, immediate, publishing)
-
-					err = channel.Publish(
-						c.exchange,     // exchange
-						c.routingKeyTo, // routing key
-						mandatory,      // mandatory
-						immediate,      // immediate
-						publishing,
-					)
-					logutils.Panic(err, "Failed to publish a message")
-
-					log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", c.exchange, c.routingKeyTo, delivery.Body)
-				} else {
-					log.Printf("There is not need to send anything")
-				}
-			}
-		}
-	}()
-
-	log.Printf("[*] Waiting for logs. To exit press CTRL+C")
-	<-forever
+	if errorProcesor {
+		c.process(deliveries)
+	} else {
+		forever := make(chan bool)
+		go func() {
+			c.process(deliveries)
+		}()
+		log.Printf("[*] Waiting for logs. To exit press CTRL+C")
+		<-forever
+	}
 }
 
 func showDeliveryInformation(delivery amqp.Delivery) {
@@ -240,4 +169,63 @@ func showQueueInformation(queue amqp.Queue) {
 	log.Printf("Messages ......................... %d\n", queue.Messages)
 	log.Printf("Consumers ........................ %d\n", queue.Consumers)
 	log.Printf("======================================================\n")
+}
+
+func (c Client) process(delivery amqp.Delivery) {
+	for delivery := range deliveries {
+		log.Printf("[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body)
+		showDeliveryInformation(delivery)
+
+		var dat map[string]interface{}
+		err := json.Unmarshal(delivery.Body, &dat)
+		logutils.Panic(err)
+
+		message := Message{}
+		json.Unmarshal(delivery.Body, &message)
+
+		if c.blacklist != nil {
+			exists := collections.Contains(c.blacklist, message.ID)
+			if exists {
+				delivery.Reject(false)
+				log.Printf("[*] MessageId %s was rejected", message.ID)
+				continue
+			}
+		}
+
+		err = consumer.Process(delivery.DeliveryTag, message)
+		if err != nil {
+			next(delivery, c.exchange, c.routingKeyErros)
+		} else {
+			if c.routingKeyTo != "" {
+				next(delivery, c.exchange, c.routingKeyTo)
+			} else {
+				log.Printf("[*] There is not need to send anything")
+			}
+		}
+	}
+}
+
+func next(delivery amqp.Delivery, routingKey string) {
+	delivery.Ack(false)
+
+	publishing := amqp.Publishing{
+		ContentType:  "text/plain",
+		Body:         delivery.Body,
+		DeliveryMode: amqp.Persistent,
+		Timestamp: time.Now(),
+	}
+	mandatory := true
+	immediate := false
+	showPublishingInformation(exchange, routingKey, mandatory, immediate, publishing)
+
+	err = channel.Publish(
+		exchange,        // exchange
+		routingKey,        // routing key
+		mandatory,         // mandatory
+		immediate,         // immediate
+		publishing,
+	)
+	logutils.Panic(err, "Failed to publish a message")
+
+	log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", exchange, routingKey, delivery.Body)
 }
