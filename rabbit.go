@@ -26,7 +26,6 @@ type Client struct {
 	routingKeyErros string
 	endless         bool
 	blacklist       []string
-
 }
 
 // Message ...
@@ -76,90 +75,191 @@ func (c Client) StartConsuming(consumer Consumer) {
 	)
 	logutils.Panic(err, "Failed to declare an exchange")
 
-	queue, err := channel.QueueDeclare(
-		c.queue, // name
-		true,    // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
-	)
-	logutils.Panic(err, "Failed to declare a queue")
-	showQueueInformation(queue)
-
-	keys := []string{c.routingKeyFrom}
-
-	for _, key := range keys {
-		log.Printf("Biding [queue:%s] to [exchange:%s] with [routingKey:%s]", queue.Name, c.exchange, key)
-		err = channel.QueueBind(
-			queue.Name, // queue name
-			key,        // routing key
-			c.exchange, // exchange
-			false,
-			nil)
-		logutils.Panic(err, "Failed to bind a queue")
-	}
-
-	deliveries, err := channel.Consume(
-		queue.Name, // queue
-		"",         // consumer
-		false,      // auto ack
-		false,      // exclusive
-		false,      // no local
-		false,      // no wait
-		nil,        // args
-	)
-	logutils.Panic(err, "Failed to register a consumer")
-
 	if c.endless {
-		log.Printf("[*] Infinite consumer")
+		// Declaro la cola propia de consumidor
+		queue, err := channel.QueueDeclare(
+			c.queue, // name
+			true,    // durable
+			false,   // delete when unused
+			false,   // exclusive
+			false,   // no-wait
+			nil,     // arguments
+		)
+		logutils.Panic(err, "Failed to declare a queue")
+		showQueueInformation(queue)
+
+		keys := []string{c.routingKeyFrom}
+		for _, key := range keys {
+			log.Printf("Biding [queue:%s] to [exchange:%s] with [routingKey:%s]", queue.Name, c.exchange, key)
+			err = channel.QueueBind(
+				queue.Name, // queue name
+				key,        // routing key
+				c.exchange, // exchange
+				false,
+				nil)
+			logutils.Panic(err, "Failed to bind a queue")
+		}
+
+		// Declaro la cola del manejador de errores
+		q = fmt.Sprintf("%s_errors", rabbitQueue)
+		rk= fmt.Sprintf("to_%s", errorsQueue )
+
+		errorsQueue, err := channel.QueueDeclare(
+			q, // name
+			true,    // durable
+			false,   // delete when unused
+			false,   // exclusive
+			false,   // no-wait
+			nil,     // arguments
+		)
+		logutils.Panic(err, "Failed to declare errors queue")
+		showQueueInformation(errorsQueue)
+
+		keys = []string{rk}
+		for _, key := range keys {
+			log.Printf("Biding [queue:%s] to [exchange:%s] with [routingKey:%s]", errorsQueue.Name, c.exchange, key)
+			err = channel.QueueBind(
+				errorsQueue.Name, // queue name
+				key,        // routing key
+				c.exchange, // exchange
+				false,
+				nil)
+			logutils.Panic(err, "Failed to bind errors queue")
+		}
+
+		// Empiezo a consumir los mensajes
+		deliveries, err := channel.Consume(
+			queue.Name, // queue
+			"",         // consumer
+			false,      // auto ack
+			false,      // exclusive
+			false,      // no local
+			false,      // no wait
+			nil,        // args
+		)
+		logutils.Panic(err, "Failed to register a consumer")
+
 		forever := make(chan bool)
 		go func() {
-			c.processDelivery(consumer, deliveries, channel, keys)
+			for delivery := range deliveries {
+				log.Printf("[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body)
+				// showDeliveryInformation(delivery)
+
+				var dat map[string]interface{}
+				err := json.Unmarshal(delivery.Body, &dat)
+				logutils.Panic(err)
+
+				message := Message{}
+				json.Unmarshal(delivery.Body, &message)
+
+				if c.blacklist != nil {
+					exists := collections.Contains(c.blacklist, message.ID)
+					if exists {
+						delivery.Reject(false)
+						log.Printf("[*] MessageId %s was rejected", message.ID)
+						continue
+					}
+				}
+
+				requeue, err := consumer.Process(delivery.Timestamp, message)
+				if err != nil {
+					next(delivery, channel, c.exchange, c.routingKeyErros)
+				} else if requeue {
+					delivery.Nack(false, true)
+					log.Printf("[*] Requeue message")
+				} else {
+					if c.routingKeyTo != "" {
+						next(delivery, channel, c.exchange, c.routingKeyTo, )
+					} else {
+						log.Printf("[*] There is not need to send anything")
+					}
+				}
+			}
 		}()
-		log.Printf("[*] Waiting for logs. To exit press CTRL+C")
 		<-forever
+
 	} else {
-		log.Printf("[*] Finite consumer")
-		c.processDelivery(consumer, deliveries, channel, keys)
+
+		// Declaro la cola propia de consumidor
+		queue, err := channel.QueueDeclarePassive(
+			c.queue, // name
+			true,         // durable
+			false,        // delete when unused
+			false,        // exclusive
+			false,        // no-wait
+			nil,          // arguments
+		)
+
+		// Empiezo a consumir los mensajes
+		deliveries, err := channel.Consume(
+			queue.Name, // queue
+			"",         // consumer
+			false,      // auto ack
+			false,      // exclusive
+			false,      // no local
+			false,      // no wait
+			nil,        // args
+		)
+		logutils.Panic(err, "Failed to register a consumer")
+
+		forever := make(chan bool)
+		go func() {
+			time.Sleep(5 * time.Second)
+			messagesCounter := 0
+			for delivery := range deliveries {
+				log.Printf("[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body)
+				messagesCounter++
+				// showDeliveryInformation(delivery)
+
+				var dat map[string]interface{}
+				err := json.Unmarshal(delivery.Body, &dat)
+				logutils.Panic(err)
+
+				message := Message{}
+				json.Unmarshal(delivery.Body, &message)
+
+				if c.blacklist != nil {
+					exists := collections.Contains(c.blacklist, message.ID)
+					if exists {
+						delivery.Reject(false)
+						log.Printf("[*] MessageId %s was rejected", message.ID)
+						continue
+					}
+				}
+
+				requeue, err := consumer.Process(delivery.Timestamp, message)
+				if err != nil {
+					next(delivery, channel, c.exchange, c.routingKeyErros)
+				} else if requeue {
+					delivery.Nack(false, true)
+					log.Printf("[*] Requeue message")
+				} else {
+					if c.routingKeyTo != "" {
+						next(delivery, channel, c.exchange, c.routingKeyTo, )
+					} else {
+						log.Printf("[*] There is not need to send anything")
+					}
+				}
+
+				if queue.Messages == messagesCounter {
+					log.Printf(" [*] se procesaron todos los mensajes")
+					forever <- true
+				}
+			}
+		}()
+
+		if queue.Messages == 0 {
+			log.Printf(" [*] There is no messages in the queue. Bye!")
+		} else {
+			log.Printf(" [*] Waiting for logs. To exit press CTRL+C")
+			<-forever
+		}
 	}
+
 }
 
-func (c Client) processDelivery(consumer Consumer, deliveries <-chan amqp.Delivery, channel *amqp.Channel, keys []string) {
-	for delivery := range deliveries {
-		log.Printf("[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body)
-		// showDeliveryInformation(delivery)
-
-		var dat map[string]interface{}
-		err := json.Unmarshal(delivery.Body, &dat)
-		logutils.Panic(err)
-
-		message := Message{}
-		json.Unmarshal(delivery.Body, &message)
-
-		if c.blacklist != nil {
-			exists := collections.Contains(c.blacklist, message.ID)
-			if exists {
-				delivery.Reject(false)
-				log.Printf("[*] MessageId %s was rejected", message.ID)
-				continue
-			}
-		}
-
-		requeue, err := consumer.Process(delivery.Timestamp, message)
-		if err != nil {
-			next(delivery, channel, c.exchange, c.routingKeyErros)
-		} else if requeue {
-			delivery.Nack(false, true)
-			log.Printf("[*] Requeue message")
-		} else {
-			if c.routingKeyTo != "" {
-				next(delivery, channel, c.exchange, c.routingKeyTo, )
-			} else {
-				log.Printf("[*] There is not need to send anything")
-			}
-		}
-	}
+// func (c Client) processDelivery(consumer Consumer, deliveries <-chan amqp.Delivery, channel *amqp.Channel, keys []string) {
+	
 }
 
 func next(delivery amqp.Delivery, channel *amqp.Channel, exchange, routingKey string) {
