@@ -7,7 +7,6 @@ import (
 	"time"
 	"strings"
 	"errors"
-	"strconv"
 	logrus_stack "github.com/Gurpartap/logrus-stack"
 	"github.com/sirupsen/logrus"
 
@@ -88,6 +87,7 @@ func MakeClient(logLevel, logFormat, host, user, password, exchange, queue, rout
 
 // StartConsuming ...
 func (c Client) StartConsuming(consumer Consumer) {
+	time.Sleep(5 * time.Second)
 
 	conn, err := amqp.Dial(c.uri)
 	logutils.Panic(err, "Failed to connect to RabbitMQ")
@@ -187,27 +187,21 @@ func (c Client) StartConsuming(consumer Consumer) {
 				Log(message.ID, fmt.Sprintf("[*] Receiving message [exchange:%s] [keys:%s] [body:%s]", c.exchange, keys, delivery.Body))
 				// showDeliveryInformation(delivery)
 
-				if c.blacklist != nil {
-					exists := collections.Contains(c.blacklist, message.ID)
-					if exists {
-						delivery.Reject(false)
-						Log(message.ID, fmt.Sprintf("[*] MessageId %s was rejected", message.ID))
-						continue
-					}
-				}
-
-				requeue, err := consumer.Process(delivery.Timestamp, message)
-				if err != nil {
-					next(delivery, channel, c.exchange, routing_key_queue_errors)
-				} else if requeue {
-					delivery.Nack(false, true)
-					Log(message.ID, fmt.Sprintf("[*] Requeue message"))
-				} else {
-					if c.routingKeyTo != "" {
-						next(delivery, channel, c.exchange, c.routingKeyTo, )
+				deleted := deleteMessageFromBlackList(message, c.blacklist, delivery)
+				if !deleted {
+					requeue, err := consumer.Process(delivery.Timestamp, message)
+					if err != nil {
+						next(message, delivery, channel, c.exchange, routing_key_queue_errors)
+					} else if requeue {
+						delivery.Nack(false, true)
+						Log(message.ID, fmt.Sprintf("[*] Requeue message"))
 					} else {
-						delivery.Ack(false)
-						Log(message.ID, fmt.Sprintf("[*] There is not need to send anything"))
+						if c.routingKeyTo != "" {
+							next(message, delivery, channel, c.exchange, c.routingKeyTo)
+						} else {
+							delivery.Ack(false)
+							Log(message.ID, fmt.Sprintf("[*] There is not need to send anything"))
+						}
 					}
 				}
 			}
@@ -240,7 +234,6 @@ func (c Client) StartConsuming(consumer Consumer) {
 
 		forever := make(chan bool)
 		go func() {
-			time.Sleep(5 * time.Second)
 			messagesCounter := 0
 			for delivery := range deliveries {
 				messagesCounter++
@@ -255,33 +248,21 @@ func (c Client) StartConsuming(consumer Consumer) {
 
 				Log(message.ID, fmt.Sprintf("[*] Receiving message [exchange:%s] [body:%s]", c.exchange, delivery.Body))
 
-				if c.blacklist != nil {
-					justString := strings.Join(c.blacklist," ")
-					log.Printf("[+++] c.blacklist != nil: " + justString + "  message.ID: " + message.ID)
-					log.Printf("[+++] len(c.blacklist): %d", len(c.blacklist))
-					exists := collections.Contains(c.blacklist, message.ID)
-					log.Printf("[+++] exists: " + strconv.FormatBool(exists))
-					if exists {
-						delivery.Reject(false)
-						Log(message.ID, fmt.Sprintf("[*] Message rejected"))
-						continue
-					}
-				} else {
-					log.Printf("[+] c.blacklist == nil")
-				}
-
-				requeue, err := consumer.Process(delivery.Timestamp, message)
-				if err != nil {
-					errors.New("Error Consumer can not fails!")
-				} else if requeue {
-					delivery.Nack(false, true)
-					Log(message.ID, fmt.Sprintf("[*] Requeue message"))
-				} else {
-					if c.routingKeyTo != "" {
-						next(delivery, channel, c.exchange, c.routingKeyTo, )
+				deleted := deleteMessageFromBlackList(message, c.blacklist, delivery)
+				if !deleted {
+					requeue, err := consumer.Process(delivery.Timestamp, message)
+					if err != nil {
+						errors.New("Error Consumer can not fails!")
+					} else if requeue {
+						delivery.Nack(false, true)
+						Log(message.ID, fmt.Sprintf("[*] Requeue message"))
 					} else {
-						delivery.Ack(false)
-						Log(message.ID, fmt.Sprintf("[*] There is not need to send anything"))
+						if c.routingKeyTo != "" {
+							next(message, delivery, channel, c.exchange, c.routingKeyTo)
+						} else {
+							delivery.Ack(false)
+							Log(message.ID, fmt.Sprintf("[*] There is not need to send anything"))
+						}
 					}
 				}
 
@@ -303,7 +284,7 @@ func (c Client) StartConsuming(consumer Consumer) {
 }
 
 
-func next(delivery amqp.Delivery, channel *amqp.Channel, exchange, routingKey string) {
+func next(message Message, delivery amqp.Delivery, channel *amqp.Channel, exchange, routingKey string) {
 	delivery.Ack(false)
 
 	publishing := amqp.Publishing{
@@ -316,18 +297,24 @@ func next(delivery amqp.Delivery, channel *amqp.Channel, exchange, routingKey st
 	immediate := false
 	// showPublishingInformation(exchange, routingKey, mandatory, immediate, publishing)
 
-	err := channel.Publish(
-		exchange,          // exchange
-		routingKey,        // routing key
-		mandatory,         // mandatory
-		immediate,         // immediate
-		publishing,
-	)
+	err := channel.Publish(exchange, routingKey, mandatory, immediate, publishing)
 	logutils.Panic(err, "Failed to publish a message")
 
-	log.Printf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", exchange, routingKey, delivery.Body)
+	Log(message.ID, fmt.Sprintf("Sending message [exchange:%s] [routingKey:%s] [body:%s]", exchange, routingKey, delivery.Body))
 }
 
+func deleteMessageFromBlackList(message Message, blacklist []string, delivery amqp.Delivery) {
+	deleted := false
+	if blacklist != nil {
+		exists := collections.Contains(blacklist, message.ID)
+		if exists {
+			delivery.Reject(false)
+			deleted = true
+			Log(message.ID, fmt.Sprintf("[*] Message rejected"))
+		}
+	}
+	return deleted
+}
 
 func showDeliveryInformation(delivery amqp.Delivery) {
 	log.Printf("=== [Delivery Information] ==========================\n")
