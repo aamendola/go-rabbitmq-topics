@@ -1,1 +1,1 @@
-# rabbitmq-topics
+# go-rabbitmq-topics
