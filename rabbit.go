@@ -2,27 +2,26 @@ package rabbit
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
-	"time"
-	"strings"
 	"errors"
+	"fmt"
 	logrus_stack "github.com/Gurpartap/logrus-stack"
 	"github.com/sirupsen/logrus"
+	"log"
+	"strings"
+	"time"
 
-	logutils "github.com/aamendola/go-utils/log"
 	"github.com/aamendola/go-utils/collections"
+	logutils "github.com/aamendola/go-utils/log"
 	"github.com/streadway/amqp"
 )
 
 var logger *logrus.Logger
 
 func Log(eventID string, args ...interface{}) {
-	logger.WithFields(logrus.Fields {
+	logger.WithFields(logrus.Fields{
 		"eventId": eventID,
 	}).Info(args...)
 }
-
 
 func configureLogger(logLevel, logFormat string) {
 	logger = logrus.New()
@@ -54,12 +53,12 @@ type Consumer interface {
 
 // Client ...
 type Client struct {
-	uri             string
-	exchange        string
-	queue           string
-	routingKeyFrom  string
-	routingKeyTo    string
-	blacklist       []string
+	uri            string
+	exchange       string
+	queue          string
+	routingKeyFrom string
+	routingKeyTo   string
+	blacklist      []string
 }
 
 // Message ...
@@ -123,9 +122,13 @@ func (c Client) StartConsuming(consumer Consumer) {
 		logutils.Panic(err, "Failed to declare a queue")
 		showQueueInformation(queue)
 
+		// Declaro la cola del manejador de errores
+		queue_errors_name := fmt.Sprintf("%s-errors", c.queue)
+		routing_key_queue_errors := fmt.Sprintf("to-%s", queue_errors_name)
+
 		keys := []string{c.routingKeyFrom}
 		for _, key := range keys {
-			log.Printf("Biding [queue:%s] to [exchange:%s] with [routingKey:%s]", queue.Name, c.exchange, key)
+			log.Printf("Biding [queue:%s] to [exchange:%s] with [routingKeyFrom:%s] [routingKeyTo:%s] [routingKeyErrors:%s]", queue.Name, c.exchange, key, c.routingKeyTo, routing_key_queue_errors)
 			err = channel.QueueBind(
 				queue.Name, // queue name
 				key,        // routing key
@@ -135,17 +138,13 @@ func (c Client) StartConsuming(consumer Consumer) {
 			logutils.Panic(err, "Failed to bind a queue")
 		}
 
-		// Declaro la cola del manejador de errores
-		queue_errors_name := fmt.Sprintf("%s-errors", c.queue)
-		routing_key_queue_errors := fmt.Sprintf("to-%s", queue_errors_name)
-
 		errorsQueue, err := channel.QueueDeclare(
 			queue_errors_name, // name
-			true,    // durable
-			false,   // delete when unused
-			false,   // exclusive
-			false,   // no-wait
-			nil,     // arguments
+			true,              // durable
+			false,             // delete when unused
+			false,             // exclusive
+			false,             // no-wait
+			nil,               // arguments
 		)
 		logutils.Panic(err, "Failed to declare errors queue")
 		showQueueInformation(errorsQueue)
@@ -213,11 +212,11 @@ func (c Client) StartConsuming(consumer Consumer) {
 		// Declaro la cola propia de consumidor
 		queue, err := channel.QueueDeclarePassive(
 			c.queue, // name
-			true,         // durable
-			false,        // delete when unused
-			false,        // exclusive
-			false,        // no-wait
-			nil,          // arguments
+			true,    // durable
+			false,   // delete when unused
+			false,   // exclusive
+			false,   // no-wait
+			nil,     // arguments
 		)
 
 		// Empiezo a consumir los mensajes
@@ -231,6 +230,8 @@ func (c Client) StartConsuming(consumer Consumer) {
 			nil,        // args
 		)
 		logutils.Panic(err, "Failed to register a consumer")
+
+		log.Printf("Biding [queue:%s] to [exchange:%s] with [routingKeyFrom:%s] [routingKeyTo:%s]", c.queue, c.exchange, c.routingKeyFrom, c.routingKeyTo)
 
 		forever := make(chan bool)
 		go func() {
@@ -283,7 +284,6 @@ func (c Client) StartConsuming(consumer Consumer) {
 
 }
 
-
 func next(message Message, delivery amqp.Delivery, channel *amqp.Channel, exchange, routingKey string) {
 	delivery.Ack(false)
 
@@ -291,7 +291,7 @@ func next(message Message, delivery amqp.Delivery, channel *amqp.Channel, exchan
 		ContentType:  "text/plain",
 		Body:         delivery.Body,
 		DeliveryMode: amqp.Persistent,
-		Timestamp: time.Now(),
+		Timestamp:    time.Now(),
 	}
 	mandatory := true
 	immediate := false
